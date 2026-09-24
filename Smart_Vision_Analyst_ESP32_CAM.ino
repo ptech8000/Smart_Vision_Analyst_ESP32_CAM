@@ -15,10 +15,10 @@
 // =========================================================================
 //  CONFIGURATIONS & API KEYS
 // =========================================================================
-const char* ssid        = "P-TECH";
-const char* password    = "okayyyyy";
-const char* visionApiKey = "cd_pte_170926_YpkLE7";             
-const char* sarvamKey    = "sk_55xnrl1m_bCDrt5SmhClmmerEWEyUo47X";
+const char* ssid        = "WIFI_SSID";
+const char* password    = "WIFI_PASSWORD";
+const char* visionApiKey = "api_key_from_circuitdigest";             
+const char* sarvamKey    = "tts_api_from_sarvam";
 // Audio gain multiplier for digital volume boost (Range: 0.0f = Mute, 1.0f = Original, 2.5f = Loud/Clear, >3.5f = Distortion)
 const float AUDIO_GAIN_FACTOR = 2.5f;
 // --- PINS ---
