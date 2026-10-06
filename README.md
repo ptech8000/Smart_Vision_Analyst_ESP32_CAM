@@ -4,7 +4,7 @@
 
 **AI-powered visual assistance for real-time obstacle awareness and multilingual voice feedback**
 
-<br>
+<br><br>
 
 ![ESP32](https://img.shields.io/badge/ESP32--CAM-32-bit-red?style=for-the-badge\&logo=espressif)
 ![Arduino](https://img.shields.io/badge/Arduino-IDE-00979D?style=for-the-badge\&logo=arduino)
@@ -19,60 +19,37 @@
 
 ## 📌 Overview
 
-The **ESP32-CAM Multi-Language AI Vision Assistant** is an embedded AI system designed to provide spoken descriptions of obstacles and surroundings.
+The **ESP32-CAM Multi-Language AI Vision Assistant** is an embedded accessibility system that combines camera-based AI scene understanding with multilingual spoken feedback.
 
-The device uses an **ESP32-CAM** to capture an image, sends the image to a cloud-based Vision AI service for analysis, and converts the resulting description into speech using **Sarvam AI Text-to-Speech**.
+The ESP32-CAM captures an image, converts the RGB565 frame to JPEG, sends it to **CircuitDigest Vision Cloud**, and converts the resulting description to speech using **Sarvam AI Text-to-Speech**. Audio is played through a **MAX98357A I2S amplifier and speaker**.
 
-The spoken response is played through a **MAX98357A I2S audio amplifier and speaker**.
+The repository also contains an **Arduino Nano smart walking-stick sensor node** for local obstacle and water detection with haptic feedback.
 
-The system currently supports:
+### Supported languages
 
-* 🇬🇧 English
-* 🇮🇳 Hindi
-* 🇮🇳 Tamil
-* 🇮🇳 Malayalam
-
-The firmware uses RGB565 camera capture and software JPEG conversion before transmitting the image to the Vision API.
+- 🇬🇧 English — `en-IN`
+- 🇮🇳 Hindi — `hi-IN`
+- 🇮🇳 Tamil — `ta-IN`
+- 🇮🇳 Malayalam — `ml-IN`
 
 ---
 
 ## ✨ Key Features
 
-| Feature                 | Description                                       |
-| ----------------------- | ------------------------------------------------- |
-| 📷 AI Vision            | Captures images and sends them for AI analysis    |
-| 🤖 Cloud AI             | Uses CircuitDigest Vision Cloud                   |
-| 🗣️ Multilingual TTS    | Generates spoken responses using Sarvam AI        |
-| 🌍 4 Languages          | English, Hindi, Tamil and Malayalam               |
-| 🔊 I2S Audio            | MAX98357A digital audio output                    |
-| ⚡ Dynamic Bus Switching | Camera and I2S resources are dynamically managed  |
-| 💾 PSRAM Support        | Uses PSRAM for large audio buffers when available |
-| 📊 Performance Metrics  | Measures individual processing stages             |
-| 🔘 Physical Controls    | Dedicated capture and language buttons            |
-| 💡 Flash Assistance     | Camera flash activates during image capture       |
-| 🔐 HTTPS                | Secure cloud communication                        |
-
----
-
-# 🎯 Project Objective
-
-The objective is to create a compact embedded vision assistant capable of:
-
-```text
-Capture surroundings
-       ↓
-Understand the scene
-       ↓
-Identify obstacles / path condition
-       ↓
-Generate a short description
-       ↓
-Convert description to speech
-       ↓
-Play the result to the user
-```
-
-The AI prompt is specifically designed to produce concise information about obstacles directly ahead and whether the path is clear or blocked.
+| Feature | Description |
+|---|---|
+| 📷 AI Vision | Image capture and cloud-based scene analysis |
+| 🤖 CircuitDigest Vision | Image → concise AI description |
+| 🗣️ Sarvam AI TTS | AI description → spoken audio |
+| 🌍 Multilingual | English, Hindi, Tamil and Malayalam |
+| 🔊 I2S Audio | MAX98357A digital audio output |
+| ⚡ Dynamic Bus Switching | Camera and I2S resources are managed dynamically |
+| 💾 PSRAM Support | Large audio buffers can use PSRAM |
+| 📊 Performance Metrics | Processing-stage timing through Serial Monitor |
+| 🔘 Physical Controls | Capture and language buttons |
+| 💡 Flash Assistance | Camera flash during capture |
+| 🦯 Walking Stick Node | Local ultrasonic + water sensing with haptic feedback |
+| 🔐 HTTPS | Secure cloud communication |
 
 ---
 
@@ -80,214 +57,130 @@ The AI prompt is specifically designed to produce concise information about obst
 
 ```mermaid
 flowchart TD
+    U["👤 User"] --> C["🔘 Capture Button<br/>GPIO 13"]
+    C --> CAM["📷 ESP32-CAM"]
+    CAM --> JPG["RGB565 → JPEG"]
+    JPG --> V["🌐 CircuitDigest<br/>Vision Cloud"]
+    V --> T["📝 AI Description"]
+    T --> S["🌐 Sarvam AI TTS"]
+    S --> A["🔤 Base64 WAV"]
+    A --> I["🎵 I2S"]
+    I --> AMP["MAX98357A"]
+    AMP --> SPK["🔊 Speaker"]
+    L["🔘 Language Button<br/>GPIO 2"] --> CAM
+    W["📡 Wi-Fi"] --> V
+    W --> S
 
-    A["👤 User"] --> B["🔘 Capture Button<br/>GPIO 13"]
-
-    B --> C["📷 ESP32-CAM"]
-
-    C --> D["RGB565 Image"]
-
-    D --> E["JPEG Conversion<br/>frame2jpg()"]
-
-    E --> F["🌐 HTTPS"]
-
-    F --> G["🤖 CircuitDigest<br/>Vision Cloud API"]
-
-    G --> H["📝 AI Generated Description"]
-
-    H --> I["🌐 Sarvam AI<br/>Text-to-Speech"]
-
-    I --> J["🔤 Base64 Audio"]
-
-    J --> K["🧠 ESP32-CAM<br/>Base64 Decode"]
-
-    K --> L["🎵 WAV Audio"]
-
-    L --> M["🔊 I2S"]
-
-    M --> N["MAX98357A"]
-
-    N --> O["🔈 Speaker"]
-
-    P["🔘 Language Button<br/>GPIO 2"] --> Q["🌍 Language Selection"]
-
-    Q --> C
-
-    R["📡 Wi-Fi"] --> F
-    R --> I
+    N["🦯 Arduino Nano"] --> H["📳 Haptic Feedback"]
+    US["HC-SR04"] --> N
+    WS["💧 Water Sensor"] --> N
+    N --> E["📡 Serial Events → ESP32"]
 ```
 
 ---
 
-# 🔄 Processing Pipeline
-
-The complete processing sequence is:
+# 🔄 Vision Processing Pipeline
 
 ```text
-┌──────────────────────┐
-│     CAPTURE IMAGE    │
-└──────────┬───────────┘
-           ↓
-┌──────────────────────┐
-│   RGB565 FRAME       │
-└──────────┬───────────┘
-           ↓
-┌──────────────────────┐
-│ RGB565 → JPEG        │
-│ Software Conversion  │
-└──────────┬───────────┘
-           ↓
-┌──────────────────────┐
-│ CIRCUITDIGEST        │
-│ VISION AI            │
-└──────────┬───────────┘
-           ↓
-┌──────────────────────┐
-│ GENERATED TEXT       │
-└──────────┬───────────┘
-           ↓
-┌──────────────────────┐
-│ SARVAM AI TTS        │
-└──────────┬───────────┘
-           ↓
-┌──────────────────────┐
-│ BASE64 WAV AUDIO     │
-└──────────┬───────────┘
-           ↓
-┌──────────────────────┐
-│ BASE64 DECODE        │
-└──────────┬───────────┘
-           ↓
-┌──────────────────────┐
-│ I2S → MAX98357A      │
-└──────────┬───────────┘
-           ↓
-┌──────────────────────┐
-│      SPEAKER         │
-└──────────────────────┘
+CAPTURE IMAGE
+      ↓
+RGB565 FRAME
+      ↓
+RGB565 → JPEG
+      ↓
+CircuitDigest Vision AI
+      ↓
+AI Generated Description
+      ↓
+Sarvam AI TTS
+      ↓
+Base64 WAV Audio
+      ↓
+ESP32 Decode
+      ↓
+I2S → MAX98357A
+      ↓
+SPEAKER
 ```
 
 ---
 
-Then add them to this section.
+# 🦯 Arduino Nano Smart Walking Stick Sensor Node
 
-### 🔧 Hardware Prototype
+Firmware: **[`smart_walking_stick_nano_v1.ino`](smart_walking_stick_nano_v1.ino)**
 
-<p align="center">
-  <img src="images/hardware-setup.jpg" width="700">
-</p>
+The Nano provides a lightweight local safety layer for the smart walking-stick subsystem. It monitors distance and water conditions and drives a vibration motor without blocking the main sensor loop.
 
-*ESP32-CAM, MAX98357A amplifier, speaker and control buttons.*
+## Pin Configuration
 
----
+| Component | Nano Pin | Function |
+|---|---:|---|
+| HC-SR04 TRIG | D9 | Ultrasonic trigger |
+| HC-SR04 ECHO | D10 | Ultrasonic echo |
+| Water sensor | A2 | Analog water detection |
+| Vibration motor | D6 | PWM haptic output |
+| SoftwareSerial RX | D2 | Serial input |
+| SoftwareSerial TX | D3 | Serial output |
+| Serial | 9600 baud | Nano ↔ ESP32 communication |
 
-### 📷 ESP32-CAM Assembly
+## Haptic Safety Logic
 
-<p align="center">
-  <img src="images/esp32cam-device.jpg" width="700">
-</p>
+| Condition | Response |
+|---|---|
+| `< 30 cm` obstacle | Maximum / continuous danger vibration |
+| `30–100 cm` obstacle | Distance-dependent vibration |
+| No obstacle | No obstacle alert |
+| Water detected | `SHORT → SHORT → LONG → PAUSE` |
 
-*ESP32-CAM vision capture unit.*
+A close obstacle has priority over the water pattern. The water pattern uses `millis()` rather than blocking delays so sensor monitoring and serial communication continue during the alert.
 
----
-
-### 🖥️ Serial Monitor
-
-<p align="center">
-  <img src="images/serial-monitor.jpg" width="850">
-</p>
-
-*Real-time system status and performance benchmark output.*
-
----
-
-### 🤖 AI Vision Result
-
-<p align="center">
-  <img src="images/ai-result.jpg" width="850">
-</p>
-
-*AI-generated description returned from the vision service.*
-
----
-
-> **Note:** The image paths above are placeholders. Replace them with your actual project photographs and screenshots.
-
----
-
-# 🔌 Wiring Diagram
-
-## ESP32-CAM → Control Buttons
-
-| Component             | ESP32-CAM |
-| --------------------- | --------: |
-| Capture Button        |   GPIO 13 |
-| Language Button       |    GPIO 2 |
-| Button other terminal |       GND |
-
-The firmware configures both buttons using internal pull-up resistors.
-
-### Button Logic
+## Serial Event Protocol
 
 ```text
-GPIO 13 ──────┐
-              │
-          [ CAPTURE ]
-              │
-             GND
-
-
-GPIO 2 ───────┐
-              │
-         [ LANGUAGE ]
-              │
-             GND
+WATER
+OBSTACLE:<distance_cm>
+CLEAR
 ```
 
-A button press pulls the GPIO LOW.
+Example:
+
+```text
+OBSTACLE:27
+```
+
+### ⚠️ Logic-Level Warning
+
+The classic Arduino Nano uses **5 V logic**, while ESP32 GPIOs are **3.3 V logic**. Do **not** connect Nano TX directly to an ESP32 RX input. Use a suitable level shifter or resistor divider.
 
 ---
 
-# 🔊 ESP32-CAM → MAX98357A
+# 🔌 ESP32-CAM Wiring
 
-The I2S interface is configured as:
+## Control Buttons
 
-| MAX98357A   |          ESP32-CAM |
-| ----------- | -----------------: |
-| BCLK        |            GPIO 14 |
-| LRC / WS    |            GPIO 12 |
-| DIN         |            GPIO 15 |
-| GND         |                GND |
-| VIN         | Appropriate supply |
-| OUT+ / OUT- |            Speaker |
+| Component | ESP32-CAM |
+|---|---:|
+| Capture button | GPIO 13 |
+| Language button | GPIO 2 |
+| Other button terminal | GND |
 
-The firmware defines:
+Both inputs use internal pull-ups; pressing a button pulls the GPIO LOW.
+
+## MAX98357A I2S
+
+| MAX98357A | ESP32-CAM |
+|---|---:|
+| BCLK | GPIO 14 |
+| LRC / WS | GPIO 12 |
+| DIN | GPIO 15 |
+| GND | GND |
+| VIN | Appropriate supply |
+| OUT+ / OUT- | Speaker |
 
 ```cpp
 #define I2S_BCLK 14
 #define I2S_LRC  12
 #define I2S_DOUT 15
-```
-
-and initializes the I2S interface dynamically before audio playback.
-
----
-
-## 🔌 Audio Wiring Diagram
-
-```mermaid
-flowchart LR
-
-    ESP["ESP32-CAM"]
-
-    ESP -- "GPIO 14 / BCLK" --> AMP["MAX98357A"]
-    ESP -- "GPIO 12 / LRC" --> AMP
-    ESP -- "GPIO 15 / DIN" --> AMP
-
-    PWR["Power"] --> AMP
-    GND["GND"] --> AMP
-
-    AMP --> SPK["🔊 Speaker"]
 ```
 
 > **Important:** Verify the supply voltage and speaker impedance requirements of your specific MAX98357A module before powering the circuit.
@@ -296,179 +189,96 @@ flowchart LR
 
 # 📷 Camera Interface
 
-The firmware uses the following camera GPIO configuration:
-
 | Camera Signal | GPIO |
-| ------------- | ---: |
-| PWDN          |   32 |
-| RESET         |   -1 |
-| XCLK          |    0 |
-| SIOD          |   26 |
-| SIOC          |   27 |
-| Y9            |   35 |
-| Y8            |   34 |
-| Y7            |   39 |
-| Y6            |   36 |
-| Y5            |   21 |
-| Y4            |   19 |
-| Y3            |   18 |
-| Y2            |    5 |
-| VSYNC         |   25 |
-| HREF          |   23 |
-| PCLK          |   22 |
+|---|---:|
+| PWDN | 32 |
+| RESET | -1 |
+| XCLK | 0 |
+| SIOD | 26 |
+| SIOC | 27 |
+| Y9 | 35 |
+| Y8 | 34 |
+| Y7 | 39 |
+| Y6 | 36 |
+| Y5 | 21 |
+| Y4 | 19 |
+| Y3 | 18 |
+| Y2 | 5 |
+| VSYNC | 25 |
+| HREF | 23 |
+| PCLK | 22 |
 
-The firmware configures the camera for QVGA RGB565 capture.
+The firmware uses QVGA RGB565 capture followed by software JPEG conversion.
 
 ---
 
-# ⚠️ Important GPIO Architecture
+# ⚠️ Dynamic GPIO / Bus Switching
 
-This project uses GPIO resources that overlap between the camera and I2S audio configuration.
-
-To handle this, the firmware uses **dynamic bus switching**.
-
-### Camera mode
+Camera and I2S resources overlap on the ESP32-CAM design, so the firmware switches between the two operating modes.
 
 ```text
-I2S STOPPED
-     ↓
+CAMERA MODE
+I2S stopped
+    ↓
 Camera initialized
-     ↓
+    ↓
 Image captured
-     ↓
+    ↓
 JPEG generated
-     ↓
+    ↓
 Camera deinitialized
-```
 
-### Audio mode
-
-```text
-Camera STOPPED
-     ↓
+AUDIO MODE
+Camera stopped
+    ↓
 I2S initialized
-     ↓
+    ↓
 WAV decoded
-     ↓
+    ↓
 Audio played
-     ↓
+    ↓
 I2S stopped
 ```
 
-This behavior is implemented through `initI2S()`, `stopI2S()`, and `initCameraHardware()`.
+The implementation uses `initCameraHardware()`, `initI2S()` and `stopI2S()`.
 
 ---
 
-# 🌍 Supported Languages
+# 🌍 Language Configuration
 
-| Language       | Language Code | Sarvam Voice |
-| -------------- | ------------- | ------------ |
-| 🇮🇳 Hindi     | `hi-IN`       | `shubh`      |
-| 🇬🇧 English   | `en-IN`       | `shubh`      |
-| 🇮🇳 Tamil     | `ta-IN`       | `kavitha`    |
-| 🇮🇳 Malayalam | `ml-IN`       | `gokul`      |
+| Language | Code | Voice |
+|---|---|---|
+| Hindi | `hi-IN` | `shubh` |
+| English | `en-IN` | `shubh` |
+| Tamil | `ta-IN` | `kavitha` |
+| Malayalam | `ml-IN` | `gokul` |
 
-The firmware stores these settings in a `LanguageConfig` structure.
-
----
-
-# 🔘 User Interface
-
-## Capture Button
-
-**GPIO 13**
-
-Press once to:
-
-```text
-Capture → Analyze → Speak
-```
-
-The firmware applies a 500 ms button debounce interval.
-
----
-
-## 🌐 Language Button
-
-**GPIO 2**
-
-Each press cycles through the four supported languages.
-
-```text
-Hindi
-  ↓
-English
-  ↓
-Tamil
-  ↓
-Malayalam
-  ↓
-Hindi
-```
-
-The device announces the selected language using TTS.
+The language button on **GPIO 2** cycles through the supported languages. The capture button on **GPIO 13** starts the `Capture → Analyze → Speak` workflow.
 
 ---
 
 # 🔑 API Configuration
 
-The project uses two cloud APIs.
-
-| Service                    | Purpose                | Endpoint / Configuration                                        |
-| -------------------------- | ---------------------- | --------------------------------------------------------------- |
+| Service | Purpose | Endpoint |
+|---|---|---|
 | CircuitDigest Vision Cloud | Image → AI description | `https://www.circuitdigest.cloud/api/v1/image-to-text/generate` |
-| Sarvam AI                  | Text → Speech          | `https://api.sarvam.ai/text-to-speech`                          |
+| Sarvam AI | Text → speech | `https://api.sarvam.ai/text-to-speech` |
 
----
-
-## 1️⃣ CircuitDigest Vision API
-
-The firmware stores the Vision API key in:
+### CircuitDigest
 
 ```cpp
 const char* visionApiKey = "YOUR_CIRCUITDIGEST_API_KEY";
 ```
 
-The image request contains:
+The image is uploaded as `multipart/form-data` with the API key supplied through the `X-API-Key` header.
 
-```text
-prompt
-imageFile
-```
-
-The image is uploaded as:
-
-```text
-multipart/form-data
-```
-
-The firmware sends the API key using the `X-API-Key` HTTP header.
-
-### API Flow
-
-```text
-ESP32-CAM
-    │
-    │ JPEG + Prompt
-    ▼
-CircuitDigest Vision API
-    │
-    │ JSON
-    ▼
-generated_text
-```
-
----
-
-# 2️⃣ Sarvam AI Text-to-Speech
-
-The Sarvam API key is configured as:
+### Sarvam AI
 
 ```cpp
 const char* sarvamKey = "YOUR_SARVAM_API_KEY";
 ```
 
-The current API request uses:
+Current audio configuration documented by the firmware:
 
 ```text
 Model: bulbul:v3
@@ -476,54 +286,26 @@ Sample Rate: 16000 Hz
 Pace: 0.90
 ```
 
-The firmware sends the selected language code and voice model in the request.
-
-### API Flow
-
-```text
-AI Description
-      │
-      ▼
-Sarvam TTS
-      │
-      ▼
-Base64 Audio
-      │
-      ▼
-ESP32 Decode
-      │
-      ▼
-WAV
-      │
-      ▼
-I2S
-```
-
 ---
 
-# 🔐 API Security
+# 🔐 Security
 
-**Never commit real credentials to GitHub.**
-
-Use placeholders in your public source code:
+**Never commit real Wi-Fi or API credentials to GitHub.** Use placeholders:
 
 ```cpp
 const char* ssid        = "YOUR_WIFI_SSID";
 const char* password    = "YOUR_WIFI_PASSWORD";
-
 const char* visionApiKey = "YOUR_CIRCUITDIGEST_API_KEY";
 const char* sarvamKey    = "YOUR_SARVAM_API_KEY";
 ```
 
-The uploaded source currently contains credential placeholders, which should remain placeholders in the public repository.
-
-For a production implementation, credentials should preferably be separated from the main source code.
+For production hardware, credentials should preferably be separated from the main firmware source.
 
 ---
 
 # 📦 Required Libraries
 
-The firmware uses:
+ESP32 firmware dependencies include:
 
 ```cpp
 #include "esp_camera.h"
@@ -536,120 +318,41 @@ The firmware uses:
 #include "mbedtls/base64.h"
 ```
 
-### Dependencies
+Required environment:
 
-* ESP32 Arduino Core
-* ArduinoJson
-* ESP32 Camera Driver
-* ESP32 I2S Driver
-* mbedTLS Base64
-
----
-
-# 💻 Software Requirements
-
-Recommended development environment:
-
-| Software           | Purpose              |
-| ------------------ | -------------------- |
-| Arduino IDE        | Firmware development |
-| ESP32 Arduino Core | ESP32 support        |
-| ArduinoJson        | JSON parsing         |
-| CircuitDigest API  | Vision analysis      |
-| Sarvam AI          | Text-to-speech       |
+- Arduino IDE
+- ESP32 Arduino Core
+- ArduinoJson
+- ESP32 camera driver
+- ESP32 I2S driver
+- mbedTLS Base64
 
 ---
 
 # 🚀 Installation
 
-## Step 1 — Clone the Repository
-
 ```bash
-git clone https://github.com/YOUR_USERNAME/ESP32-CAM-Multi-Language-Vision-Assistant.git
+git clone https://github.com/ptech8000/Smart_Vision_Analyst_ESP32_CAM.git
+cd Smart_Vision_Analyst_ESP32_CAM
 ```
 
-```bash
-cd ESP32-CAM-Multi-Language-Vision-Assistant
-```
+1. Open the ESP32-CAM firmware in Arduino IDE.
+2. Configure Wi-Fi credentials.
+3. Configure CircuitDigest and Sarvam API keys.
+4. Select the ESP32-CAM board matching your hardware.
+5. Select the correct COM port.
+6. Compile and upload.
+7. Open Serial Monitor at **115200 baud**.
+
+The Nano sensor firmware can be opened separately as `smart_walking_stick_nano_v1.ino` and uploaded to the Arduino Nano.
 
 ---
 
-## Step 2 — Open in Arduino IDE
+# 🧪 Startup & Performance Monitoring
 
-Open:
+The ESP32-CAM firmware initializes Serial, buttons, flash, Wi-Fi and language selection before waiting for user input.
 
-```text
-ESP32-CAM-Multi-Language-Vision-Assistant.ino
-```
-
----
-
-## Step 3 — Configure Wi-Fi
-
-Change:
-
-```cpp
-const char* ssid     = "YOUR_WIFI_SSID";
-const char* password = "YOUR_WIFI_PASSWORD";
-```
-
----
-
-## Step 4 — Configure APIs
-
-Add your API credentials:
-
-```cpp
-const char* visionApiKey = "YOUR_CIRCUITDIGEST_API_KEY";
-const char* sarvamKey    = "YOUR_SARVAM_API_KEY";
-```
-
----
-
-## Step 5 — Select Board
-
-Select the ESP32-CAM board corresponding to your hardware.
-
-Then select the correct COM port.
-
----
-
-## Step 6 — Compile and Upload
-
-Compile the firmware and upload it to the ESP32-CAM.
-
-After uploading, open Serial Monitor at:
-
-```text
-115200 baud
-```
-
----
-
-# 🧪 Startup Sequence
-
-After booting, the firmware:
-
-```text
-1. Disables brownout detection
-2. Starts Serial
-3. Configures buttons
-4. Configures flash LED
-5. Connects to Wi-Fi
-6. Announces Wi-Fi connection
-7. Announces current language
-8. Waits for user input
-```
-
-The startup configuration is implemented in `setup()`.
-
----
-
-# 📊 Performance Monitoring
-
-One of the project's useful features is its built-in timing benchmark.
-
-The firmware measures:
+The Serial Monitor reports timing for stages including:
 
 ```text
 Camera initialization
@@ -658,60 +361,74 @@ JPEG conversion
 Camera deinitialization
 Vision SSL connection
 Image upload
-Vision AI response
+Vision response
 JSON parsing
-Sarvam SSL connection
-Sarvam POST request
+Sarvam request
 Audio download
-Base64 extraction
-Base64 decoding
+Base64 extraction / decoding
 Speaker playback
 Total end-to-end delay
 ```
 
-The measurements are printed to the Serial Monitor after a successful AI response.
+Audio uses 16 kHz / 16-bit processing and can use PSRAM for large temporary buffers when available.
 
 ---
 
-# ⚙️ Audio Configuration
+# 🖼️ Project Images
 
-Current configuration:
+> Replace the following placeholder paths with the actual project photographs/screenshots when available.
 
-```cpp
-const float AUDIO_GAIN_FACTOR = 2.5f;
-const float speechPace = 0.90;
-```
+### Hardware Prototype
 
-Audio is requested at:
+<img src="images/hardware-setup.jpg" width="700">
 
-```text
-16,000 Hz
-16-bit
-```
+### ESP32-CAM Assembly
 
-The firmware supports both mono and stereo WAV processing and duplicates mono samples across left/right I2S channels.
+<img src="images/esp32cam-device.jpg" width="700">
+
+### Serial Monitor
+
+<img src="images/serial-monitor.jpg" width="850">
+
+### AI Vision Result
+
+<img src="images/ai-result.jpg" width="850">
 
 ---
 
-# 🧠 Memory Management
-
-The project defines:
-
-```cpp
-#define BOARD_HAS_PSRAM
-```
-
-Audio buffers are preferentially allocated in PSRAM:
+# 🧩 Repository Structure
 
 ```text
-PSRAM
-  ↓
-If unavailable
-  ↓
-Standard heap
+Smart_Vision_Analyst_ESP32_CAM/
+│
+├── README.md
+├── smart_walking_stick_nano_v1.ino
+│
+└── images/
+    ├── hardware-setup.jpg
+    ├── esp32cam-device.jpg
+    ├── serial-monitor.jpg
+    └── ai-result.jpg
 ```
 
-This is useful because Base64-encoded audio can require a significant temporary memory buffer.
+### System relationship
+
+```text
+                 SMART ASSISTANCE SYSTEM
+                          │
+          ┌───────────────┴───────────────┐
+          │                               │
+          ▼                               ▼
+  📷 ESP32-CAM VISION              🦯 ARDUINO NANO
+          │                               │
+    Cloud Vision AI                 Local Sensors
+          │                               │
+    Sarvam AI TTS                  Haptic Feedback
+          │                               │
+          └───────────────┬───────────────┘
+                          ▼
+                User Safety Assistance
+```
 
 ---
 
@@ -719,98 +436,49 @@ This is useful because Base64-encoded audio can require a significant temporary 
 
 ### Camera initialization failure
 
-Check:
+Check the camera ribbon cable, camera module, board selection, GPIO configuration and power supply.
 
-* Camera ribbon cable
-* Camera module
-* ESP32-CAM board selection
-* Camera GPIO configuration
-* Power supply
+### Vision API failure
 
-Serial output:
-
-```text
-[CAMERA ERROR] Failed hardware initialization!
-```
-
----
-
-### Vision API connection failure
-
-Check:
-
-* Wi-Fi connection
-* Internet connection
-* API key
-* CircuitDigest API availability
-
-Serial output:
-
-```text
-[CLOUD ERROR] Could not connect to Vision Cloud!
-```
-
----
-
-### Vision response timeout
-
-The firmware waits up to approximately 10 seconds for the API response.
-
-Check:
-
-* Wi-Fi signal strength
-* Internet latency
-* API availability
-* Request size
-
----
+Check Wi-Fi, Internet connectivity, API key and CircuitDigest availability.
 
 ### No speaker output
 
-Check:
-
-* MAX98357A wiring
-* Speaker wiring
-* I2S pins
-* Power
-* Sarvam API key
-* API response
-
----
+Check MAX98357A wiring, speaker wiring, I2S pins, power and Sarvam API credentials.
 
 ### Distorted audio
 
-Reduce:
-
-```cpp
-AUDIO_GAIN_FACTOR
-```
-
-For example:
+Reduce the firmware's `AUDIO_GAIN_FACTOR`, for example:
 
 ```cpp
 const float AUDIO_GAIN_FACTOR = 1.5f;
 ```
 
+---
+
 # 👨‍💻 Author
 
 ## P-TECH
 
-**ESP32-CAM Multi-Language AI Vision Assistant**
+**Precision Technology, Engineering & Creative Hardware**
 
 Built with:
 
 ```text
 ESP32-CAM
-     +
+   +
 Computer Vision
-     +
+   +
 Cloud AI
-     +
+   +
 Sarvam AI
-     +
+   +
+Arduino Nano
+   +
+Haptic Feedback
+   +
 I2S Audio
-     +
+   +
 Embedded Systems
 ```
 
@@ -818,86 +486,9 @@ Embedded Systems
 
 # ⭐ Project Highlights
 
-<p align="center">
-
-| 📷 Vision |     🤖 AI    |  🗣️ Voice | 🌍 Languages |
-| :-------: | :----------: | :--------: | :----------: |
-| ESP32-CAM | Cloud Vision | Sarvam TTS |       4      |
-
-</p>
-
----
-
-## 📜 Project Workflow
-
-```text
-                    ┌──────────────────┐
-                    │      START       │
-                    └────────┬─────────┘
-                             │
-                             ▼
-                    ┌──────────────────┐
-                    │ Connect to Wi-Fi │
-                    └────────┬─────────┘
-                             │
-                             ▼
-                    ┌──────────────────┐
-                    │ Select Language  │
-                    └────────┬─────────┘
-                             │
-                             ▼
-                    ┌──────────────────┐
-                    │ Capture Button   │
-                    └────────┬─────────┘
-                             │
-                             ▼
-                    ┌──────────────────┐
-                    │ Capture RGB565   │
-                    │ Image            │
-                    └────────┬─────────┘
-                             │
-                             ▼
-                    ┌──────────────────┐
-                    │ Convert to JPEG  │
-                    └────────┬─────────┘
-                             │
-                             ▼
-                    ┌──────────────────┐
-                    │ CircuitDigest    │
-                    │ Vision AI        │
-                    └────────┬─────────┘
-                             │
-                             ▼
-                    ┌──────────────────┐
-                    │ AI Description   │
-                    └────────┬─────────┘
-                             │
-                             ▼
-                    ┌──────────────────┐
-                    │ Sarvam AI TTS    │
-                    └────────┬─────────┘
-                             │
-                             ▼
-                    ┌──────────────────┐
-                    │ Decode Base64    │
-                    │ WAV Audio        │
-                    └────────┬─────────┘
-                             │
-                             ▼
-                    ┌──────────────────┐
-                    │ MAX98357A / I2S  │
-                    └────────┬─────────┘
-                             │
-                             ▼
-                    ┌──────────────────┐
-                    │     SPEAKER      │
-                    └────────┬─────────┘
-                             │
-                             ▼
-                    ┌──────────────────┐
-                    │       END        │
-                    └──────────────────┘
-```
+| 📷 Vision | 🤖 AI | 🗣️ Voice | 🦯 Haptics |
+|:---:|:---:|:---:|:---:|
+| ESP32-CAM | Cloud Vision | Sarvam TTS | Arduino Nano |
 
 ---
 
@@ -905,6 +496,6 @@ Embedded Systems
 
 ### 👁️ See the World. Understand It. Hear the Answer.
 
-**ESP32-CAM × Vision AI × Sarvam AI**
+**ESP32-CAM × Vision AI × Sarvam AI × Smart Haptic Sensing**
 
 </p>
